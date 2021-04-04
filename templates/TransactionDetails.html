@@ -1,0 +1,170 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Transaction Details</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{{url_for('static', filename='TrasactionDetails.css')}}">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="jumbotron text-center">
+  <p>Transaction Details</p> 
+</div>
+  
+<div class="container">
+  <div class="row">
+    <div class="col-sm-12">
+      <h3 class="clH3">Transaction Accounts</h3>
+      <table border="1">
+        <thead>
+          <td>
+            Account No. / Nick Name
+          </td>
+          <td>
+            Branch
+          </td>
+          <td>
+            IFSC Code
+          </td>
+          <td>
+            Available Balance
+          </td>
+          <td>
+            Transactions
+          </td>
+        </thead>
+        <tr>
+          <td>
+            123XXXXX901234
+          </td>
+          <td>
+            FARIDABAD SECTOR 24
+          </td>
+          <td>
+            SBIN0050304
+          </td>
+          <td>
+            <a href="https://www.youtube.com/">Click Here For Account Balance</a>
+          </td>
+          <td>
+            <a href="https://www.youtube.com/">Click Here For Last 10 Transaction</a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <div class="col-sm-12">
+      
+      <h3 class="clH3">Statements</h3>
+
+      <select id="TransactionType" name="Transaction Type">
+        <option value="1">Recent Transaction</option>
+        <option value="2">Current Month</option>
+        <option value="3">Last Month</option>
+        <option value="4">Last 3 Months</option>
+        <option value="5">Last 6 Months</option>
+        <option value="6">Current Financial Year</option>
+      </select>
+
+      <table border="1" style="margin-top: 10px">
+          
+        <thead>
+          <td>
+            Date & Time   
+          </td>
+          <td>
+            Transaction Details
+          </td>
+          <td>
+            Reference Number
+          </td>
+          <td>
+            Debit
+          </td>
+          <td>
+            Credit
+          </td>
+          <td>
+            Balance (INR)
+          </td>
+        </thead>
+
+        <tr>
+          <td>
+            2021-April-01 19:30:12
+          </td>
+          <td>
+            POS 541919XXXXXX8421 AMAZON
+          </td>
+          <td>
+            T90055922992
+          </td>
+          <td>
+            24000
+          </td>
+          <td>
+            0
+          </td>
+          <td>
+            24000
+          </td>
+      </tr>
+
+        <tr>
+              <td>
+                  2021-April-02 19:30:12
+              </td>
+              <td>
+                  Credit Interest Capitalised
+              </td>
+              <td>
+                  OP0055922992
+              </td>
+              <td>
+                  1000
+              </td>
+              <td>
+                  0
+              </td>
+              <td>
+                  25000
+              </td>
+          </tr>
+
+        <tr>
+              <td>
+                  2021-April-03 19:30:12
+              </td>
+              <td>
+                  Paytm Charges
+              </td>
+              <td>
+                  OP055922992
+              </td>
+              <td>
+                  0
+              </td>
+              <td>
+                  1500
+              </td>
+              <td>
+                  23500
+              </td>
+          </tr>
+          
+      </table>
+
+    </div>
+    
+  </div>
+</div>
+</body>
+</html>
