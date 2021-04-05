@@ -6,15 +6,15 @@
     <h2 class="mx-auto">Secure Banking System</h2>
   </div>
   <div class="mx-auto login-container">
-    <form>
+    <form action="{{ url_for('login') }}" method="POST">
       <div class="form-group">
         <label for="username">UserName</label>
-        <input type="text" class="form-control" id="username" aria-describedby="usernameHelp">
+        <input type="text" class="form-control" id="username" name="username" aria-describedby="usernameHelp">
         <small id="usernameHelp" class="form-text text-muted">User name is case-sensitive.</small>
       </div>
       <div class="form-group">
         <label for="bankPassword">Password</label>
-        <input type="password" class="form-control" id="bankPassword">
+        <input type="password" class="form-control" id="bankPassword" name="bankPassword">
       </div>
       <button type="submit" class="btn btn-primary">Submit</button>
     </form>
