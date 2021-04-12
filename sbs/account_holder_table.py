@@ -7,3 +7,5 @@ class AccountHolder(db.Model):
     phone = db.Column(db.String(13), nullable=False)
     address = db.Column(db.String(50))
     email_id = db.Column(db.String(50))
+    branch_code = db.Column(db.String(30), db.ForeignKey("bank.branch_code"), nullable=False)
+
