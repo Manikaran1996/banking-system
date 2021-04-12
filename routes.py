@@ -4,7 +4,7 @@ from flask_login import login_required, login_user, logout_user
 from app import app, bcrypt, login_manager, db_session
 from sbs.models.tables import *
 from sbs.utils import get_latest_account_num, get_account_balance, deposit_money_db, withdraw_money_db, \
-    transfer_amount_db
+    transfer_amount_db, get_transactions_from_db
 
 
 @app.route("/", methods=["GET"])
@@ -16,7 +16,6 @@ def index():
 def login():
     username = request.form.get("username")
     password = request.form.get("bankPassword")
-    # TODO: check if user does not exist
     user = OnlineUser.query.filter(OnlineUser.user_name == username).first()
     if user is not None:
         password_in_db = user.password
@@ -25,7 +24,10 @@ def login():
             session['privilege_level'] = user.privilege_level
             session['username'] = user.user_name
             session['account_number'] = user.account_number
-            return redirect(url_for('transactions'))
+            if user.privilege_level == 0:
+                return redirect(url_for('transactions'))
+            else:
+                return redirect(url_for('check_balance_with_account'))
         print("Username and password does not match")
     return redirect(url_for('index'))
 
@@ -120,7 +122,11 @@ def add_emp_to_db():
 @login_required
 @app.route("/transactions", methods=["GET"])
 def transactions():
-    return render_template("transaction-details.html")
+    if session['privilege_level'] == 0:
+        all_transactions = get_transactions_from_db(session['account_number'])
+        return render_template("transaction-details.html", transactions=all_transactions)
+    elif session['privilege_level'] >= 5:
+        return '<h1>In progress</h1>'
 
 
 @login_required
@@ -194,7 +200,7 @@ def withdraw():
     account_number = request.form.get("account_number")
     amount = float(request.form.get("amount"))
     ret = withdraw_money_db(account_number, amount, "Amount withdrawn from bank")
-    if ret[0] == True:
+    if ret[0]:
         return redirect(url_for('get_account_balance_route', account_number=account_number,
                                 back=url_for('withdraw_view')))
     else:
@@ -214,15 +220,17 @@ def transfer_view():
 @app.route("/transfer", methods=["POST"])
 def transfer():
     if session['privilege_level'] == 0 and request.form.get('src_account_number') != session['account_number']:
+        print(session['account_number'], request.form.get('src_account_number'))
         return '<h1>Access Denied</h1>'
-
     source_account_num = request.form.get('src_account_number')
     rec_account_num = request.form.get('rec_account_number')
     amount = float(request.form.get('amount'))
     ret = transfer_amount_db(source_account_num, rec_account_num, amount, "Amount transferred")
-    if ret[0]:
+    if ret[0] and session['privilege_level'] >= 5:
         return redirect(url_for('get_account_balance_route', account_number=source_account_num,
                                 back=url_for('transfer_view')))
+    elif ret[0] and session['privilege_level'] == 0:
+        return redirect(url_for('get_account_balance_self'))
     else:
         return '<h1>Error: {}</h1>'.format(ret[1])
 

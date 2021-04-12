@@ -109,3 +109,9 @@ def withdraw_money_db(source_account: str, amount: float, description: str = Non
     db_session.add(source_transaction)
     db_session.commit()
     return True, "Transaction Successful"
+
+
+def get_transactions_from_db(account_number):
+    return db_session.query(Transaction)\
+            .filter(Transaction.account_number == account_number)\
+            .all()
