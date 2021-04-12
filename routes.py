@@ -3,7 +3,8 @@ from flask_login import login_required, login_user, logout_user
 
 from app import app, bcrypt, login_manager, db_session
 from sbs.models.tables import *
-from sbs.utils import get_latest_account_num, get_account_balance
+from sbs.utils import get_latest_account_num, get_account_balance, deposit_money_db, withdraw_money_db, \
+    transfer_amount_db
 
 
 @app.route("/", methods=["GET"])
@@ -136,9 +137,12 @@ def get_account_balance_route():
     if session['privilege_level'] < 5:
         return "<h1>Access Denied</h1>"
     account_number = request.args.get("account_number")
+    back = request.args.get('back')
+    if back is None:
+        back = url_for('check_balance_with_account')
     balance = get_account_balance(account_number)
     return render_template("show-account-balance.html", account_number=account_number, balance=balance,
-                           back=url_for('check_balance_with_account'))
+                           back=back)
 
 
 @login_required
@@ -149,6 +153,78 @@ def get_account_balance_self():
     balance = get_account_balance(session['account_number'])
     return render_template("show-account-balance.html", account_number=session['account_number'], balance=balance,
                            back=url_for('transactions'))
+
+
+@login_required
+@app.route("/deposit-view")
+def deposit_view():
+    if session['privilege_level'] < 5:
+        return "<h1>Access Denied<h1>"
+    return render_template("deposit.html")
+
+
+@login_required
+@app.route("/withdraw-view")
+def withdraw_view():
+    if session['privilege_level'] < 5:
+        return "<h1>Access Denied<h1>"
+    return render_template("withdrawal.html")
+
+
+@login_required
+@app.route("/deposit-money", methods=["POST"])
+def deposit():
+    if session['privilege_level'] < 5:
+        return "<h1>Access Denied<h1>"
+    account_number = request.form.get("account_number")
+    amount = float(request.form.get("amount"))
+    ret = deposit_money_db(account_number, amount, "Amount deposited at bank")
+    if ret[0]:
+        return redirect(url_for('get_account_balance_route', account_number=account_number,
+                                back=url_for('deposit_view')))
+    else:
+        return make_response('<h1>Internal error</h1>')
+
+
+@login_required
+@app.route("/withdraw-money", methods=["POST"])
+def withdraw():
+    if session['privilege_level'] < 5:
+        return "<h1>Access Denied<h1>"
+    account_number = request.form.get("account_number")
+    amount = float(request.form.get("amount"))
+    ret = withdraw_money_db(account_number, amount, "Amount withdrawn from bank")
+    if ret[0] == True:
+        return redirect(url_for('get_account_balance_route', account_number=account_number,
+                                back=url_for('withdraw_view')))
+    else:
+        return make_response('<h1>Internal error</h1>')
+
+
+@login_required
+@app.route("/transfer-view")
+def transfer_view():
+    source_account_num = None
+    if session['privilege_level'] == 0:
+        source_account_num = session['account_number']
+    return render_template("transfer-view.html", source_account_num=source_account_num)
+
+
+@login_required
+@app.route("/transfer", methods=["POST"])
+def transfer():
+    if session['privilege_level'] == 0 and request.form.get('src_account_number') != session['account_number']:
+        return '<h1>Access Denied</h1>'
+
+    source_account_num = request.form.get('src_account_number')
+    rec_account_num = request.form.get('rec_account_number')
+    amount = float(request.form.get('amount'))
+    ret = transfer_amount_db(source_account_num, rec_account_num, amount, "Amount transferred")
+    if ret[0]:
+        return redirect(url_for('get_account_balance_route', account_number=source_account_num,
+                                back=url_for('transfer_view')))
+    else:
+        return '<h1>Error: {}</h1>'.format(ret[1])
 
 
 @login_required

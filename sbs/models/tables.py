@@ -51,7 +51,7 @@ class OnlineUser(Base, UserMixin):
 
 class Transaction(Base):
     __tablename__ = 'transaction'
-    transaction_id = Column(Integer, primary_key=True)
+    transaction_id = Column(String(30), primary_key=True)
     transaction_time = Column(DateTime, nullable=False)
     account_number = Column(String(30), ForeignKey("account_holder.account_number"), nullable=False)
     amount = Column(Float, nullable=False)
