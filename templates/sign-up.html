@@ -105,7 +105,11 @@
           <div class="col-12 col-md-4">
             <div class="form-group">
               <label for="branch_code">Branch Code</label>
-              <input type="text" class="form-control" id="branch_code" name="branch_code">
+              <select name="branch_code" id="branch_code" class="form-control">
+                {% for bc in codes %}
+                  <option value="{{ bc }}">{{ bc }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
         </div>

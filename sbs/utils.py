@@ -2,6 +2,11 @@
 import hashlib
 import time
 from datetime import datetime
+from random import randint
+import http.client
+import json
+from enum import Enum
+
 
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import and_
@@ -115,3 +120,64 @@ def get_transactions_from_db(account_number):
     return db_session.query(Transaction)\
             .filter(Transaction.account_number == account_number)\
             .all()
+
+
+def get_otp():
+    return randint(10000, 999999)
+
+
+def send_sms(phone, otp):
+    conn = http.client.HTTPSConnection("api.sms.to")
+    payload = {
+        "message": "OTP to login to SBS: {}".format(otp),
+        "to": phone,
+        "sender_id": "SBS"
+    }
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer 7vy66lAvJ8avNlTBCYIfgOgsCZbVWckf'
+    }
+    conn.request("POST", "/sms/send", json.dumps(payload), headers)
+    res = conn.getresponse()
+    data = res.read()
+    print(data.decode("utf-8"))
+
+
+def get_bank_codes():
+    return db_session.query(Bank.branch_code).all()
+
+
+def get_last_emp_id():
+    try:
+        emp_id_row = db_session.query(func.max(Employee.emp_id).label("max_emp_id")) \
+            .one()[0]
+    except NoResultFound:
+        emp_id_row = None
+    return emp_id_row
+
+
+def get_latest_emp_id():
+    emp_id_row = get_last_emp_id()
+    if emp_id_row is None:
+        max_emp_id = 1
+    else:
+        print(emp_id_row)
+        max_emp_id = int(emp_id_row[1:]) + 1
+    print(max_emp_id)
+    emp_id = 'E{:0>4}'.format(max_emp_id)
+    return emp_id
+
+
+class PrivilegeLevels(Enum):
+    USER = 0
+    REGULAR_EMPLOYEE = 5
+    ADMINISTRATOR = 10
+
+
+def get_privilege_levels():
+    return [PrivilegeLevels.USER.name, PrivilegeLevels.REGULAR_EMPLOYEE.name,
+            PrivilegeLevels.ADMINISTRATOR.name]
+
+
+def get_privilege_value(name):
+    return PrivilegeLevels[name].value

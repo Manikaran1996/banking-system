@@ -1,10 +1,13 @@
 from flask import request, render_template, redirect, url_for, session, make_response
 from flask_login import login_required, login_user, logout_user
+from datetime import datetime
+from datetime import timedelta
 
 from app import app, bcrypt, login_manager, db_session
 from sbs.models.tables import *
 from sbs.utils import get_latest_account_num, get_account_balance, deposit_money_db, withdraw_money_db, \
-    transfer_amount_db, get_transactions_from_db
+    transfer_amount_db, get_transactions_from_db, get_otp, send_sms, get_bank_codes, get_latest_emp_id, \
+    PrivilegeLevels, get_privilege_levels, get_privilege_value
 
 
 @app.route("/", methods=["GET"])
@@ -20,22 +23,42 @@ def login():
     if user is not None:
         password_in_db = user.password
         if bcrypt.check_password_hash(password_in_db, password):
-            login_user(user)
             session['privilege_level'] = user.privilege_level
             session['username'] = user.user_name
             session['account_number'] = user.account_number
-            if user.privilege_level == 0:
-                return redirect(url_for('transactions'))
-            else:
-                return redirect(url_for('check_balance_with_account'))
-        print("Username and password does not match")
+            session['phone'] = user.phone
+            otp = get_otp()
+            send_sms(user.phone, otp)
+            session['otp'] = otp
+            return redirect(url_for('enter_otp'))
     return redirect(url_for('index'))
+
+
+@app.route("/enter-otp")
+def enter_otp():
+    return render_template('input-otp.html', msg=request.args.get('msg'), function='verify_otp')
+
+
+@app.route("/submit-otp", methods=['POST'])
+def verify_otp():
+    entered_otp = request.form.get('otp')
+    if str(entered_otp).strip() == str(session['otp']).strip():
+        user = OnlineUser.query.filter(OnlineUser.user_name == session['username']).first()
+        login_user(user)
+        if session['privilege_level'] == 0:
+            return redirect(url_for('transactions'))
+        else:
+            return redirect(url_for('check_balance_with_account'))
+    else:
+        print('OTP verification failed!!')
+        return redirect(url_for('enter_otp'))
 
 
 @login_required
 @app.route("/register")
 def register():
-    return render_template("sign-up.html")
+    bcodes = [b[0] for b in get_bank_codes()]
+    return render_template("sign-up.html", codes=bcodes)
 
 
 @login_required
@@ -84,11 +107,12 @@ def register_user():
     online_user = OnlineUser(user_name=user_name,
                              password=hashed_password,
                              account_number=account_number,
-                             privilege_level=0)
+                             privilege_level=PrivilegeLevels.USER.value,
+                             phone=phone)
     db_session.add(account_holder)
     db_session.add(online_user)
     db_session.commit()
-    return redirect(url_for('transactions'))
+    return redirect(url_for('check_balance_with_account'))
 
 
 @login_required
@@ -96,7 +120,8 @@ def register_user():
 def register_employee():
     if session["privilege_level"] < 7:
         return redirect(url_for("transactions"))
-    return render_template("create-employee.html")
+    emp_id = get_latest_emp_id()
+    return render_template("create-employee.html", emp_id=emp_id, levels=get_privilege_levels())
 
 
 @login_required
@@ -107,16 +132,18 @@ def add_emp_to_db():
     designation = request.form.get('designation')
     username = request.form.get('username')
     password = request.form.get('password')
+    phone = request.form.get('phone')
     privilege_level = request.form.get('privilege_level')
-    emp = Employee(emp_id=emp_id, emp_name=emp_name, designation=designation)
+    emp = Employee(emp_id=emp_id, emp_name=emp_name, designation=designation, phone=phone)
     online_user = OnlineUser(user_name=username, password=bcrypt.generate_password_hash(password),
-                             employee_id=emp_id, privilege_level=privilege_level)
+                             employee_id=emp_id, privilege_level=get_privilege_value(privilege_level),
+                             phone=phone)
     db_session.add(emp)
     db_session.commit()
     db_session.add(online_user)
     db_session.commit()
     print("Successfully registered")
-    return redirect(url_for("transactions"))
+    return redirect(url_for('check_balance_with_account'))
 
 
 @login_required
@@ -216,6 +243,34 @@ def transfer_view():
     return render_template("transfer-view.html", source_account_num=source_account_num)
 
 
+def transfer_amount(source_account_num, rec_account_num, amount):
+    ret = transfer_amount_db(source_account_num, rec_account_num, amount, "Amount transferred")
+    if ret[0] and session['privilege_level'] >= 5:
+        return redirect(url_for('get_account_balance_route', account_number=source_account_num,
+                                back=url_for('transfer_view')))
+    elif ret[0] and session['privilege_level'] == 0:
+        return redirect(url_for('get_account_balance_self'))
+    else:
+        return '<h1>Error: {}</h1>'.format(ret[1])
+
+
+@login_required
+@app.route("/transfer-otp-view")
+def transfer_otp_view():
+    return render_template('input-otp.html', msg=request.args.get('msg'), function='transfer_otp_verify')
+
+
+@login_required
+@app.route("/transfer-otp-verify", methods=['POST'])
+def transfer_otp_verify():
+    entered_otp = request.form.get('otp')
+    if str(entered_otp).strip() == str(session['transfer_otp']).strip():
+        return transfer_amount(session['transfer_source'], session['transfer_rec'], session['transfer_amount'])
+    else:
+        print('OTP verification failed!!')
+        return redirect(url_for('transfer_otp_view', msg='OTP Verification failed'))
+
+
 @login_required
 @app.route("/transfer", methods=["POST"])
 def transfer():
@@ -225,14 +280,18 @@ def transfer():
     source_account_num = request.form.get('src_account_number')
     rec_account_num = request.form.get('rec_account_number')
     amount = float(request.form.get('amount'))
-    ret = transfer_amount_db(source_account_num, rec_account_num, amount, "Amount transferred")
-    if ret[0] and session['privilege_level'] >= 5:
-        return redirect(url_for('get_account_balance_route', account_number=source_account_num,
-                                back=url_for('transfer_view')))
-    elif ret[0] and session['privilege_level'] == 0:
-        return redirect(url_for('get_account_balance_self'))
-    else:
-        return '<h1>Error: {}</h1>'.format(ret[1])
+    if amount > 1000:
+        print('Amount greater than 10000')
+        otp = get_otp()
+        send_sms(session['phone'], otp)
+        session['transfer_otp'] = otp
+        session['transfer_otp_valid'] = datetime.now() + timedelta(minutes=5)
+        session['transfer_source'] = source_account_num
+        session['transfer_rec'] = rec_account_num
+        session['transfer_amount'] = amount
+        return redirect(url_for('transfer_otp_view'))
+    return transfer_amount(source_account_num, rec_account_num, amount)
+
 
 
 @login_required

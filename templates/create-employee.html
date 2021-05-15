@@ -19,7 +19,7 @@
         </div>
         <div class="form-group">
           <label for="emp_id">Employee Id</label>
-          <input type="text" class="form-control" id="emp_id" name="emp_id">
+          <input type="text" class="form-control" id="emp_id" name="emp_id" value="{{ emp_id }}" readonly>
         </div>
         <div class="form-group">
           <label for="designation">Designation</label>
@@ -34,10 +34,14 @@
           <input type="password" class="form-control" id="password" name="password">
         </div>
         <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="text" class="form-control" id="phone" name="phone">
+        </div>
+        <div class="form-group">
           <label for="privilege_level">Privilege Level</label>
           <select class="form-control" id="privilege_level" name="privilege_level">
-            {% for i in range(1, 11) %}
-              <option value="{{ i }}"> {{ i }} </option>
+            {% for plevel in levels %}
+              <option value="{{ plevel }}"> {{ plevel }} </option>
             {% endfor %}
           </select>
         </div>

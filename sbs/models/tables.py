@@ -34,6 +34,7 @@ class Employee(Base):
     emp_id = Column(String(10), primary_key=True)
     emp_name = Column(String(50))
     designation = Column(String(50))
+    phone = Column(String(13), nullable=False)
 
 
 class OnlineUser(Base, UserMixin):
@@ -43,7 +44,8 @@ class OnlineUser(Base, UserMixin):
     account_number = Column(String(30), ForeignKey('account_holder.account_number'), unique=True)
     employee_id = Column(String(30), ForeignKey('employee.emp_id'), unique=True)
     password = Column(String(60), nullable=False)
-    privilege_level = Column(Integer, nullable=False, default=0)  # 10 is the highest privilege level
+    privilege_level = Column(Integer, nullable=False, default=0)
+    phone = Column(String(13), nullable=False)
 
     def get_id(self):
         return self._id
